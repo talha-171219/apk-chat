@@ -58,6 +58,7 @@ const replyText = document.getElementById("replyText");
 const replyCancel = document.getElementById("replyCancel");
 
 const menuBtn = document.getElementById("menuBtn");
+const closeDrawerBtn = document.getElementById("closeDrawerBtn");
 const drawerOverlay = document.getElementById("drawerOverlay");
 const sendError = document.getElementById("sendError");
 
@@ -68,12 +69,12 @@ let currentChatId = null;
 let unsubscribeMessages = null;
 let replyContext = null; // { id, text, senderName }
 
-/* ==== 4) Drawer helpers (mobile) ==== */
-function toggleDrawer(open) {
-  document.body.classList.toggle("drawer-open", !!open);
-}
-menuBtn?.addEventListener("click", () => toggleDrawer(true));
-drawerOverlay?.addEventListener("click", () => toggleDrawer(false));
+/* ==== 4) Drawer helpers (mobile full-screen) ==== */
+function openDrawer() { document.body.classList.add("drawer-open"); }
+function closeDrawer() { document.body.classList.remove("drawer-open"); }
+menuBtn?.addEventListener("click", openDrawer);
+closeDrawerBtn?.addEventListener("click", closeDrawer);
+drawerOverlay?.addEventListener("click", closeDrawer);
 
 /* ==== 5) Auth ==== */
 const provider = new GoogleAuthProvider();
@@ -112,6 +113,7 @@ onAuthStateChanged(auth, async (user) => {
     await ensureUserProfile(user);
     renderMe(user);
     await loadPeople();
+    updateSendEnabled();
   } else {
     appEl.classList.add("hidden");
     authModal.classList.add("show");
@@ -176,7 +178,7 @@ function personItem(u) {
   `;
   div.addEventListener("click", () => {
     openChatWith(u);
-    toggleDrawer(false); // close drawer on mobile after selecting
+    closeDrawer(); // close full-screen drawer on mobile
   });
   return div;
 }
@@ -215,9 +217,7 @@ async function ensureChatDoc(chatId, me, peer) {
   } else {
     try {
       await updateDoc(ref, { updatedAt: serverTimestamp() });
-    } catch (_) {
-      // ignore strict rule
-    }
+    } catch (_) { /* ignore strict rule */ }
   }
 }
 
@@ -253,16 +253,17 @@ msgForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   sendError.textContent = "";
 
+  if (!currentUser) {
+    sendError.textContent = "Please sign in first.";
+    return;
+  }
   if (!currentChatId || !currentPeer) {
     sendError.textContent = "প্রথমে একটি person সিলেক্ট করুন।";
     return;
   }
 
   const text = msgInput.value.trim();
-  if (!text) {
-    updateSendEnabled();
-    return;
-  }
+  if (!text) { updateSendEnabled(); return; }
 
   sendBtn.disabled = true;
   try {
@@ -280,7 +281,6 @@ msgForm.addEventListener("submit", async (e) => {
     await addDoc(collection(db, "chats", currentChatId, "messages"), payload);
     msgInput.value = "";
     clearReply();
-    updateSendEnabled();
     messagesEl.scrollTop = messagesEl.scrollHeight;
   } catch (e2) {
     console.error(e2);
