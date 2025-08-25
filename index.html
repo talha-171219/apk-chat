@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
   <title>Glassy DM — Firebase Chat</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="data:," />
@@ -34,9 +37,14 @@
 
   <!-- App -->
   <div id="app" class="app hidden">
-    <!-- Sidebar (becomes drawer on mobile) -->
-    <aside class="sidebar">
-      <div class="brand">Glassy DM</div>
+    <!-- Sidebar (full-screen drawer on mobile) -->
+    <aside class="sidebar" aria-label="People list">
+      <div class="mobile-sidebar-header mobile-only">
+        <div class="brand">People</div>
+        <button id="closeDrawerBtn" class="icon-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="brand desktop-only">Glassy DM</div>
 
       <div class="me" id="meCard">
         <img id="meAvatar" class="avatar" src="" alt="me" />
@@ -56,7 +64,7 @@
     </aside>
 
     <!-- Chat -->
-    <section class="chat">
+    <section class="chat" aria-label="Chat">
       <header class="chat-header">
         <button id="menuBtn" class="icon-btn mobile-only" aria-label="Open people">☰</button>
         <div class="peer">
@@ -68,18 +76,18 @@
         </div>
       </header>
 
-      <div id="messages" class="messages">
+      <div id="messages" class="messages" role="log" aria-live="polite">
         <div class="day-sep">No conversation yet</div>
       </div>
 
       <div class="msg-box">
         <form id="msgForm" autocomplete="off">
-          <div id="replyChip" class="pill hidden" style="max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          <div id="replyChip" class="pill hidden reply-chip">
             <span id="replyText">Replying…</span>
-            <span id="replyCancel" style="margin-left:8px;cursor:pointer">✕</span>
+            <span id="replyCancel" class="reply-cancel" aria-label="Cancel reply">✕</span>
           </div>
           <input id="msgInput" type="text" placeholder="Type a message…" />
-          <button id="sendBtn" type="submit">Send</button>
+          <button id="sendBtn" type="submit" disabled>Send</button>
         </form>
         <div id="sendError" class="error"></div>
       </div>
@@ -87,7 +95,7 @@
   </div>
 
   <!-- Drawer overlay (mobile) -->
-  <div id="drawerOverlay" class="drawer-overlay"></div>
+  <div id="drawerOverlay" class="drawer-overlay" aria-hidden="true"></div>
 
   <script type="module" src="app.js"></script>
 </body>
