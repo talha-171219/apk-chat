@@ -59,7 +59,7 @@ body {
 
 /* App layout */
 .app {
-  display: grid; grid-template-columns: 280px 1fr; height: 100vh; gap: 10px; padding: 10px;
+  display: grid; grid-template-columns: 280px 1fr; height: 100dvh; gap: 10px; padding: 10px;
 }
 .hidden { display: none; }
 
@@ -70,6 +70,18 @@ body {
   backdrop-filter: blur(12px); box-shadow: var(--shadow);
 }
 .brand { font-weight: 800; letter-spacing: .5px; margin-bottom: 10px; }
+.desktop-only { display: block; }
+.mobile-only { display: none; }
+
+.mobile-sidebar-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 4px 12px;
+}
+
+/* Person/me card */
 .me {
   display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 12px;
   background: rgba(255,255,255,0.04);
@@ -111,7 +123,9 @@ body {
 .peer-name { font-weight: 700; }
 
 .messages {
-  padding: 14px; overflow: auto; display: flex; flex-direction: column; gap: 10px;
+  padding: 14px;
+  padding-bottom: 22px; /* space above input on small screens */
+  overflow: auto; display: flex; flex-direction: column; gap: 10px;
   scroll-behavior: smooth;
 }
 .day-sep {
@@ -121,14 +135,18 @@ body {
 }
 
 .msg {
-  max-width: 70%; padding: 10px 12px; border-radius: 14px; position: relative; white-space: pre-wrap;
+  max-width: 75%; padding: 10px 12px; border-radius: 14px; position: relative; white-space: pre-wrap;
   background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
 }
 .msg.me {
   align-self: flex-end; /* right side like WhatsApp */
   background: linear-gradient(180deg, rgba(30,215,96,0.18), rgba(255,255,255,0.06));
+  margin-left: 14%;
 }
-.msg.other { align-self: flex-start; }
+.msg.other {
+  align-self: flex-start;
+  margin-right: 14%;
+}
 .msg .meta {
   margin-top: 6px; display: flex; gap: 8px; font-size: 11px; color: var(--muted); align-items: center;
 }
@@ -157,7 +175,10 @@ body {
 .msg:hover .msg-reply { display: inline-block; }
 
 /* Message input */
-.msg-box { padding: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+.msg-box {
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
 .msg-box form { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .msg-box input {
   flex: 1; min-width: 200px; padding: 12px 14px; border-radius: 999px;
@@ -166,9 +187,15 @@ body {
 .msg-box button {
   padding: 10px 16px; border-radius: 999px; border: 0; background: var(--accent); color: #0b0c10; font-weight: 600; cursor: pointer;
 }
+.msg-box button[disabled] { opacity: .6; cursor: not-allowed; }
 
-/* Mobile drawer + controls */
-.mobile-only { display: none; }
+.reply-chip {
+  max-width: 60%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.reply-cancel { margin-left: 8px; cursor: pointer; }
+
+/* Buttons / helpers */
 .icon-btn {
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.12);
@@ -178,24 +205,30 @@ body {
   cursor: pointer;
 }
 
+/* Drawer overlay */
 .drawer-overlay { display: none; }
 
+/* Mobile: full-screen People drawer for app-like feel */
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
 
-  .sidebar {
-    position: fixed;
-    left: 0; top: 0; height: 100vh;
-    width: 86vw; max-width: 360px;
-    transform: translateX(-105%);
-    transition: transform .25s ease;
-    z-index: 50;
-    display: flex;
-  }
-
+  .desktop-only { display: none; }
   .mobile-only { display: inline-flex; }
 
-  .drawer-open .sidebar { transform: translateX(0); }
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 100dvh;
+    width: 100vw; /* full cover */
+    border-radius: 0; /* app-like full sheet */
+    padding: calc(10px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
+    transform: translateX(-100%);
+    transition: transform .3s ease;
+    z-index: 100;
+  }
+  body.drawer-open .sidebar { transform: translateX(0); }
+
+  .mobile-sidebar-header { display: flex; }
 
   .drawer-overlay {
     position: fixed; inset: 0;
@@ -203,12 +236,17 @@ body {
     backdrop-filter: blur(2px);
     opacity: 0;
     pointer-events: none;
-    transition: opacity .2s ease;
-    z-index: 40;
+    transition: opacity .25s ease;
+    z-index: 90;
     display: block;
   }
-  .drawer-open .drawer-overlay {
+  body.drawer-open .drawer-overlay {
     opacity: 1;
     pointer-events: auto;
   }
+
+  /* Give messages a bit more horizontal space like apps */
+  .msg { max-width: 82%; }
+  .msg.me { margin-left: 8%; }
+  .msg.other { margin-right: 8%; }
 }
