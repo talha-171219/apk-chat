@@ -34,7 +34,7 @@
 
   <!-- App -->
   <div id="app" class="app hidden">
-    <!-- Sidebar -->
+    <!-- Sidebar (becomes drawer on mobile) -->
     <aside class="sidebar">
       <div class="brand">Glassy DM</div>
 
@@ -58,6 +58,7 @@
     <!-- Chat -->
     <section class="chat">
       <header class="chat-header">
+        <button id="menuBtn" class="icon-btn mobile-only" aria-label="Open people">☰</button>
         <div class="peer">
           <img id="peerAvatar" class="avatar" src="" alt="peer" />
           <div>
@@ -80,9 +81,13 @@
           <input id="msgInput" type="text" placeholder="Type a message…" />
           <button id="sendBtn" type="submit">Send</button>
         </form>
+        <div id="sendError" class="error"></div>
       </div>
     </section>
   </div>
+
+  <!-- Drawer overlay (mobile) -->
+  <div id="drawerOverlay" class="drawer-overlay"></div>
 
   <script type="module" src="app.js"></script>
 </body>
