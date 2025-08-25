@@ -1,4 +1,4 @@
-// ==== Firebase SDK imports ====
+// Firebase SDK (CDN, v10.12.4)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-analytics.js";
 import {
@@ -11,7 +11,7 @@ import {
   collection, query, orderBy, serverTimestamp, onSnapshot, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
-// ==== তোমার Firebase config ====
+/* ==== 1) Firebase config (your project) ==== */
 const firebaseConfig = {
   apiKey: "AIzaSyCvPtBqPQJz-xaXDWA65lsmloBid4IsieI",
   authDomain: "apk-chat-6e708.firebaseapp.com",
@@ -23,14 +23,10 @@ const firebaseConfig = {
   measurementId: "G-J6N73TJVPC"
 };
 
-// ==== Initialize Firebase ====
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+getAnalytics(app); // optional
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-// এরপর আগের app.js-এর বাকি কোড (UI, auth, chat logic) এখানে থাকবে...
-
 
 /* ==== 2) UI elements ==== */
 const authModal = document.getElementById("authModal");
@@ -61,6 +57,10 @@ const replyChip = document.getElementById("replyChip");
 const replyText = document.getElementById("replyText");
 const replyCancel = document.getElementById("replyCancel");
 
+const menuBtn = document.getElementById("menuBtn");
+const drawerOverlay = document.getElementById("drawerOverlay");
+const sendError = document.getElementById("sendError");
+
 /* ==== 3) State ==== */
 let currentUser = null;
 let currentPeer = null;
@@ -68,23 +68,26 @@ let currentChatId = null;
 let unsubscribeMessages = null;
 let replyContext = null; // { id, text, senderName }
 
-/* ==== 4) Auth ==== */
+/* ==== 4) Drawer helpers (mobile) ==== */
+function toggleDrawer(open) {
+  document.body.classList.toggle("drawer-open", !!open);
+}
+menuBtn?.addEventListener("click", () => toggleDrawer(true));
+drawerOverlay?.addEventListener("click", () => toggleDrawer(false));
+
+/* ==== 5) Auth ==== */
 const provider = new GoogleAuthProvider();
 
 googleBtn.addEventListener("click", async () => {
   try {
     await signInWithPopup(auth, provider);
-  } catch (e) {
-    showError(e);
-  }
+  } catch (e) { showError(e); }
 });
 
 emailSignInBtn.addEventListener("click", async () => {
   try {
     await signInWithEmailAndPassword(auth, emailInput.value.trim(), passInput.value.trim());
-  } catch (e) {
-    showError(e);
-  }
+  } catch (e) { showError(e); }
 });
 
 emailSignUpBtn.addEventListener("click", async () => {
@@ -92,13 +95,10 @@ emailSignUpBtn.addEventListener("click", async () => {
     const email = emailInput.value.trim();
     const pass = passInput.value.trim();
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    // Optional: set a displayName from email local-part
     if (!cred.user.displayName) {
       await updateProfile(cred.user, { displayName: email.split("@")[0] });
     }
-  } catch (e) {
-    showError(e);
-  }
+  } catch (e) { showError(e); }
 });
 
 signOutBtn.addEventListener("click", () => signOut(auth));
@@ -119,7 +119,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-/* ==== 5) User profile ==== */
+/* ==== 6) User profile ==== */
 async function ensureUserProfile(user) {
   const ref = doc(db, "users", user.uid);
   const snap = await getDoc(ref);
@@ -142,7 +142,7 @@ function renderMe(user) {
   meEmail.textContent = user.email || "";
 }
 
-/* ==== 6) People list ==== */
+/* ==== 7) People list ==== */
 async function loadPeople() {
   if (!currentUser) return;
   peopleList.innerHTML = "";
@@ -174,11 +174,14 @@ function personItem(u) {
       <div class="email">${escapeHtml(u.email || "")}</div>
     </div>
   `;
-  div.addEventListener("click", () => openChatWith(u));
+  div.addEventListener("click", () => {
+    openChatWith(u);
+    toggleDrawer(false); // close drawer on mobile after selecting
+  });
   return div;
 }
 
-/* ==== 7) Chat open / deterministic chatId ==== */
+/* ==== 8) Chat open / deterministic chatId ==== */
 function makeChatId(uid1, uid2) {
   return [uid1, uid2].sort().join("_");
 }
@@ -192,6 +195,7 @@ async function openChatWith(peer) {
 
   await ensureChatDoc(currentChatId, currentUser, peer);
   subscribeMessages(currentChatId);
+  updateSendEnabled();
 }
 
 /* Create chat document lazily */
@@ -209,11 +213,15 @@ async function ensureChatDoc(chatId, me, peer) {
       updatedAt: serverTimestamp()
     });
   } else {
-    await updateDoc(ref, { updatedAt: serverTimestamp() });
+    try {
+      await updateDoc(ref, { updatedAt: serverTimestamp() });
+    } catch (_) {
+      // ignore strict rule
+    }
   }
 }
 
-/* ==== 8) Messages stream ==== */
+/* ==== 9) Messages stream ==== */
 function subscribeMessages(chatId) {
   if (unsubscribeMessages) unsubscribeMessages();
   messagesEl.innerHTML = "";
@@ -240,12 +248,21 @@ function subscribeMessages(chatId) {
   });
 }
 
-/* ==== 9) Sending, reply, reactions ==== */
+/* ==== 10) Sending, reply, reactions ==== */
 msgForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (!currentChatId) return;
+  sendError.textContent = "";
+
+  if (!currentChatId || !currentPeer) {
+    sendError.textContent = "প্রথমে একটি person সিলেক্ট করুন।";
+    return;
+  }
+
   const text = msgInput.value.trim();
-  if (!text) return;
+  if (!text) {
+    updateSendEnabled();
+    return;
+  }
 
   sendBtn.disabled = true;
   try {
@@ -263,10 +280,13 @@ msgForm.addEventListener("submit", async (e) => {
     await addDoc(collection(db, "chats", currentChatId, "messages"), payload);
     msgInput.value = "";
     clearReply();
+    updateSendEnabled();
+    messagesEl.scrollTop = messagesEl.scrollHeight;
   } catch (e2) {
     console.error(e2);
+    sendError.textContent = humanizeError(e2);
   } finally {
-    sendBtn.disabled = false;
+    updateSendEnabled();
   }
 });
 
@@ -298,13 +318,12 @@ async function toggleReaction(chatId, msgId, emoji, uid) {
   });
 }
 
-/* ==== 10) Render helpers ==== */
+/* ==== 11) Render helpers ==== */
 function messageBubble(m) {
   const isMe = m.senderId === currentUser.uid;
   const div = document.createElement("div");
   div.className = `msg ${isMe ? "me" : "other"}`;
 
-  // Reply quote
   const quote = m.reply ? `
     <div class="reply-quote">
       <div style="opacity:.8">${escapeHtml(m.reply.senderName || "User")}</div>
@@ -335,12 +354,10 @@ function messageBubble(m) {
     </div>
   `;
 
-  // Reaction clicks
   div.querySelectorAll(".react-btn").forEach(btn => {
     btn.addEventListener("click", () => toggleReaction(currentChatId, m.id, btn.textContent, currentUser.uid));
   });
 
-  // Reply
   div.querySelector(".msg-reply").addEventListener("click", () => {
     setReply({
       id: m.id,
@@ -377,6 +394,7 @@ function clearChat() {
   peerName.textContent = "Select a person";
   peerStatus.textContent = "—";
   peerAvatar.src = "";
+  updateSendEnabled();
 }
 
 function showError(e) {
@@ -384,7 +402,14 @@ function showError(e) {
   authErrorEl.textContent = e?.message || "Something went wrong";
 }
 
-/* ==== 11) Utilities ==== */
+function humanizeError(e) {
+  const m = String(e?.code || e?.message || e);
+  if (m.includes("permission-denied")) return "পারমিশন নেই: Firestore rules/Authorized domain চেক করুন।";
+  if (m.includes("unauthenticated")) return "লগইন প্রয়োজন—দয়া করে সাইন‑ইন করুন।";
+  return "মেসেজ পাঠাতে সমস্যা হচ্ছে। পরে আবার চেষ্টা করুন।";
+}
+
+/* ==== 12) Utilities ==== */
 function escapeHtml(s) {
   return (s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
 }
@@ -407,8 +432,17 @@ function formatTime(ts) {
 function formatDayKey(ts) {
   const d = tsToDate(ts);
   const today = new Date(); today.setHours(0,0,0,0);
-  const diff = Math.floor((today - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  const dMid = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.floor((today - dMid) / 86400000);
   if (diff === 0) return "Today";
   if (diff === 1) return "Yesterday";
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
+
+/* ==== 13) Send button enable logic ==== */
+function updateSendEnabled() {
+  const ok = !!currentChatId && msgInput.value.trim().length > 0;
+  sendBtn.disabled = !ok;
+}
+msgInput.addEventListener("input", updateSendEnabled);
+updateSendEnabled();
