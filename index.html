@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Glassy DM — Firebase Chat</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:," />
+</head>
+<body>
+  <div class="bg"></div>
+
+  <!-- Auth modal -->
+  <div id="authModal" class="modal show">
+    <div class="modal-card">
+      <h2>Welcome back</h2>
+      <p>Sign in to start chatting in real time.</p>
+
+      <button id="googleBtn" class="google-btn">
+        <span>🔐</span> Continue with Google
+      </button>
+
+      <div class="hint">or use email</div>
+
+      <input id="emailInput" type="email" placeholder="Email" autocomplete="email" />
+      <input id="passInput" type="password" placeholder="Password" autocomplete="current-password" />
+      <button id="emailSignInBtn">Sign in with email</button>
+      <button id="emailSignUpBtn" style="margin-top:8px;background:var(--glass-strong);color:var(--text)">Create new account</button>
+
+      <div id="authError" class="error"></div>
+      <div class="hint">By continuing you agree to the terms.</div>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="app" class="app hidden">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">Glassy DM</div>
+
+      <div class="me" id="meCard">
+        <img id="meAvatar" class="avatar" src="" alt="me" />
+        <div>
+          <div id="meName" class="me-name">—</div>
+          <div id="meEmail" class="me-email">—</div>
+        </div>
+      </div>
+
+      <div class="section-title">People</div>
+      <div id="peopleList" class="people-list"></div>
+
+      <div class="sidebar-footer">
+        <button id="signOutBtn" class="pill">Sign out</button>
+        <button id="refreshBtn" class="pill">Refresh</button>
+      </div>
+    </aside>
+
+    <!-- Chat -->
+    <section class="chat">
+      <header class="chat-header">
+        <div class="peer">
+          <img id="peerAvatar" class="avatar" src="" alt="peer" />
+          <div>
+            <div id="peerName" class="peer-name">Select a person</div>
+            <div id="peerStatus" class="peer-status">—</div>
+          </div>
+        </div>
+      </header>
+
+      <div id="messages" class="messages">
+        <div class="day-sep">No conversation yet</div>
+      </div>
+
+      <div class="msg-box">
+        <form id="msgForm" autocomplete="off">
+          <div id="replyChip" class="pill hidden" style="max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            <span id="replyText">Replying…</span>
+            <span id="replyCancel" style="margin-left:8px;cursor:pointer">✕</span>
+          </div>
+          <input id="msgInput" type="text" placeholder="Type a message…" />
+          <button id="sendBtn" type="submit">Send</button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
