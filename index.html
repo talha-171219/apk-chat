@@ -14,8 +14,8 @@
       --surface-strong:rgba(23,25,38,.85);
       --text:#e8eaf2;
       --muted:#a5acc3;
-      --accent:#7c3aed;         /* purple */
-      --accent-2:#1db954;       /* spotify green */
+      --accent:#7c3aed;
+      --accent-2:#1db954;
       --bubble-me:rgba(124,58,237,.92);
       --bubble-other:rgba(44,48,71,.92);
       --ring:rgba(124,58,237,.35);
@@ -33,7 +33,6 @@
       --ring:rgba(109,40,217,.25);
     }
 
-    /* ===== GLOBAL ===== */
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
@@ -48,10 +47,9 @@
       padding:16px;
     }
 
-    /* ===== APP SHELL ===== */
     .app{
       width:100%;
-      max-width:1000px;                  /* WIDE chat box */
+      max-width:1000px;
       min-height:80vh;
       display:flex; flex-direction:column;
       background:var(--surface);
@@ -62,7 +60,6 @@
       box-shadow: 0 20px 60px rgba(0,0,0,.45);
     }
 
-    /* ===== HEADER ===== */
     .header{
       display:flex; align-items:center; justify-content:space-between;
       padding:14px 16px;
@@ -90,7 +87,6 @@
       background:var(--surface-strong);
     }
 
-    /* ===== PARTICIPANTS ===== */
     .participants{
       padding:10px 16px; display:flex; gap:8px; flex-wrap:wrap;
       border-bottom:1px solid rgba(255,255,255,.06);
@@ -106,7 +102,6 @@
     .pill img{width:22px;height:22px;border-radius:50%;object-fit:cover}
     .dot{width:8px;height:8px;border-radius:50%;background:#10b981;margin-left:4px}
 
-    /* ===== MESSAGES ===== */
     .messages{flex:1;overflow:auto;padding:18px 16px;display:flex;flex-direction:column;gap:12px}
     .msg{
       max-width:70%;
@@ -125,7 +120,6 @@
     .msg .quick{position:absolute;top:-8px;right:-30px;opacity:0;transition:.15s;cursor:pointer}
     .msg:hover .quick{opacity:.9}
 
-    /* ===== REPLY BAR + INPUT ===== */
     .replybar{
       display:none;align-items:center;justify-content:space-between;gap:10px;
       background:var(--surface-strong); padding:8px 12px;
@@ -139,7 +133,7 @@
     .input{
       flex:1; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
       color:var(--text); border-radius:999px; padding:12px 16px;
-      outline:none; font-size:16px;      /* iOS zoom fix */
+      outline:none; font-size:16px;
     }
     .send{
       width:52px;height:52px;border-radius:50%;border:none;flex-shrink:0;
@@ -152,7 +146,7 @@
 </head>
 
 <body>
-  <div class="app" id="app" style="display:none">
+  <div class="app" id="app">
     <!-- Header -->
     <div class="header">
       <div class="brand">
@@ -167,23 +161,18 @@
             <span>Dark</span>
           </label>
         </div>
-        <button id="logoutBtn" class="btn secondary" title="Logout">Logout</button>
+        <button id="logoutBtn" class="btn secondary" title="Logout" style="display:none">Logout</button>
       </div>
     </div>
 
-    <!-- Participants -->
     <div id="participants" class="participants"></div>
-
-    <!-- Messages -->
     <div id="messages" class="messages"></div>
 
-    <!-- Reply preview -->
     <div id="replyBar" class="replybar">
       <div class="replytext" id="replyText"></div>
       <button id="cancelReply" class="btn secondary" style="padding:6px 10px">Cancel</button>
     </div>
 
-    <!-- Input -->
     <form id="msgForm" class="message-form">
       <input id="msgInput" class="input" type="text" placeholder="Reply to message..." autocomplete="off"/>
       <button class="send" type="submit" title="Send">➤</button>
@@ -199,18 +188,14 @@
     </button>
   </div>
 
-  <!-- ===== Firebase + App Logic ===== -->
   <script type="module">
-    /* Firebase SDKs */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    /* ---- Config (your one kept) ---- */
     const firebaseConfig = {
       apiKey: "AIzaSyCvPtBqPQJz-xaXDWA65lsmloBid4IsieI",
       authDomain: "apk-chat-6e708.firebaseapp.com",
-      databaseURL: "https://apk-chat-6e708-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "apk-chat-6e708",
       storageBucket: "apk-chat-6e708.firebasestorage.app",
       messagingSenderId: "460028192410",
@@ -226,7 +211,6 @@
 
     const DEFAULT_AVATAR = "https://i.pravatar.cc/150?img=64";
 
-    /* ---- DOM ---- */
     const loginEl = document.getElementById("login");
     const appEl   = document.getElementById("app");
     const googleBtn = document.getElementById("googleBtn");
@@ -240,25 +224,18 @@
     const cancelReply = document.getElementById("cancelReply");
     const modeToggle = document.getElementById("modeToggle");
 
-    /* ---- State ---- */
     let unsubMsgs = null, unsubUsers = null;
-    let replyTo = null; // {id, content, name}
+    let replyTo = null;
 
-    /* ---- Theme ---- */
     modeToggle.addEventListener("change", () => {
       document.body.classList.toggle("light", !modeToggle.checked);
     });
 
-    /* ---- Auth ---- */
-    googleBtn.onclick = async () => {
-      try { await signInWithPopup(auth, provider); }
-      catch (e){ alert("Login failed"); console.error(e); }
-    };
+    googleBtn.onclick = async () => { try { await signInWithPopup(auth, provider); } catch (e){ alert("Login failed"); } };
     logoutBtn.onclick = () => signOut(auth);
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Save/merge user to 'users' collection
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           name: user.displayName || "User",
@@ -267,7 +244,7 @@
         }, { merge: true });
 
         loginEl.style.display = "none";
-        appEl.style.display = "flex";
+        logoutBtn.style.display = "block";
 
         if (unsubUsers) unsubUsers();
         if (unsubMsgs) unsubMsgs();
@@ -275,21 +252,20 @@
         unsubUsers = listenParticipants();
         unsubMsgs = listenMessages();
       } else {
-        appEl.style.display = "none";
         loginEl.style.display = "flex";
+        logoutBtn.style.display = "none";
 
         if (unsubUsers) { unsubUsers(); unsubUsers = null; }
         if (unsubMsgs) { unsubMsgs(); unsubMsgs = null; }
       }
     });
 
-    /* ---- Participants ---- */
     function listenParticipants(){
       return onSnapshot(collection(db, "users"), (snap) => {
         const list = snap.docs.map(d => d.data());
         participantsEl.innerHTML = list.map(p => `
           <div class="pill ${p.uid===auth.currentUser?.uid ? 'me':''}">
-            <img src="${p.avatar || DEFAULT_AVATAR}" alt="${p.name || 'User'}" />
+            <img src="${p.avatar || DEFAULT_AVATAR}" />
             <span>${p.name || 'User'}${p.uid===auth.currentUser?.uid ? ' (You)':''}</span>
             <div class="dot"></div>
           </div>
@@ -297,7 +273,6 @@
       });
     }
 
-    /* ---- Messages ---- */
     function listenMessages(){
       const q = query(collection(db,"chats","general-chat","messages"), orderBy("timestamp","asc"));
       return onSnapshot(q, (snap) => {
@@ -310,7 +285,7 @@
             senderName: d.senderName || "User",
             senderAvatar: d.senderAvatar || DEFAULT_AVATAR,
             content: d.content,
-            reply: d.reply || null,   // { id, content, name }
+            reply: d.reply || null,
             ts: d.timestamp?.toDate ? d.timestamp.toDate() : new Date()
           });
         });
@@ -324,30 +299,24 @@
           ${m.reply ? `<div class="quote">“${escapeHtml(m.reply.content)}” — ${escapeHtml(m.reply.name || '')}</div>` : ``}
           <div>${linkify(escapeHtml(m.content))}</div>
           <div class="meta">${formatTime(m.ts)} ${m.senderId===auth.currentUser?.uid ? '• ✓✓' : ''}</div>
-          <div class="quick" title="Reply" onclick="window._setReply('${m.id}', '${escapeAttr(m.content)}', '${escapeAttr(m.senderName)}')">↩</div>
+          <div class="quick" onclick="window._setReply('${m.id}', '${escapeAttr(m.content)}', '${escapeAttr(m.senderName)}')">↩</div>
         </div>
       `).join("");
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    /* Reply handlers (global so string onclick works) */
     window._setReply = (id, content, name) => {
       replyTo = { id, content, name };
       replyText.textContent = `Replying to ${name}: “${content}”`;
       replyBar.classList.add("show");
       msgInput.focus();
     };
-    cancelReply.onclick = () => {
-      replyTo = null;
-      replyBar.classList.remove("show");
-    };
+    cancelReply.onclick = () => { replyTo = null; replyBar.classList.remove("show"); };
 
-    /* ---- Send Message ---- */
     msgForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = msgInput.value.trim();
       if (!text || !auth.currentUser) return;
-
       const m = {
         senderId: auth.currentUser.uid,
         senderName: auth.currentUser.displayName || "User",
@@ -355,35 +324,17 @@
         content: text,
         timestamp: serverTimestamp(),
       };
-      if (replyTo) {
-        m.reply = { id: replyTo.id, content: replyTo.content, name: replyTo.name };
-      }
-
-      try {
-        await addDoc(collection(db,"chats","general-chat","messages"), m);
-      } catch(err){ console.error("send failed", err); }
+      if (replyTo) { m.reply = { id: replyTo.id, content: replyTo.content, name: replyTo.name }; }
+      await addDoc(collection(db,"chats","general-chat","messages"), m);
       msgInput.value = "";
       replyTo = null;
       replyBar.classList.remove("show");
     });
 
-    /* ---- Utils ---- */
-    function formatTime(d){
-      try{
-        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      }catch{ return "" }
-    }
-    function escapeHtml(s){
-      return s?.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) ?? "";
-    }
+    function formatTime(d){ try{ return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }catch{ return "" } }
+    function escapeHtml(s){ return s?.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) ?? ""; }
     function escapeAttr(s){ return (s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
-    function linkify(text){
-      const urlRe = /(https?:\/\/[^\s]+)/g;
-      return text.replace(urlRe, '<a href="$1" target="_blank" rel="noopener" style="color:#22d3ee;text-decoration:underline">$1</a>');
-    }
-
-    /* Show app quickly while auth resolves (optional) */
-    // document.getElementById("app").style.display = "flex";
+    function linkify(text){ return text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#22d3ee;text-decoration:underline">$1</a>'); }
   </script>
 </body>
 </html>
