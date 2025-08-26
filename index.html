@@ -19,7 +19,6 @@
       --bubble-me:rgba(124,58,237,.92);
       --bubble-other:rgba(44,48,71,.92);
       --ring:rgba(124,58,237,.35);
-      --glass-br:12px;
     }
     body.light{
       --bg:#eef1f7;
@@ -37,7 +36,7 @@
     html,body{height:100%}
     body{
       margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       background:
         radial-gradient(1200px 800px at -10% -10%, #1a1c2e 10%, transparent 40%),
         radial-gradient(1200px 800px at 110% 110%, #211a33 10%, transparent 40%),
@@ -47,6 +46,7 @@
       padding:16px;
     }
 
+    /* ===== APP SHELL ===== */
     .app{
       width:100%;
       max-width:1000px;
@@ -102,7 +102,7 @@
     .pill img{width:22px;height:22px;border-radius:50%;object-fit:cover}
     .dot{width:8px;height:8px;border-radius:50%;background:#10b981;margin-left:4px}
 
-    .messages{flex:1;overflow:auto;padding:18px 16px;display:flex;flex-direction:column;gap:12px}
+    .messages{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:12px}
     .msg{
       max-width:70%;
       padding:12px 14px;border-radius:16px;
@@ -140,14 +140,11 @@
       background:var(--accent); color:#fff; font-size:20px; cursor:pointer;
       display:grid; place-items:center; box-shadow:0 10px 28px var(--ring);
     }
-    .send:hover{filter:brightness(1.05)}
     @media (max-width:640px){ .msg{max-width:85%} }
   </style>
 </head>
-
 <body>
   <div class="app" id="app">
-    <!-- Header -->
     <div class="header">
       <div class="brand">
         <div class="avatar">T</div>
@@ -156,36 +153,28 @@
       <div class="header-controls">
         <div class="toggle">
           <span>Light</span>
-          <label style="display:inline-flex;align-items:center;gap:6px">
-            <input id="modeToggle" type="checkbox" checked />
-            <span>Dark</span>
-          </label>
+          <label><input id="modeToggle" type="checkbox" checked /> Dark</label>
         </div>
-        <button id="logoutBtn" class="btn secondary" title="Logout" style="display:none">Logout</button>
+        <button id="logoutBtn" class="btn secondary">Logout</button>
       </div>
     </div>
 
     <div id="participants" class="participants"></div>
     <div id="messages" class="messages"></div>
-
     <div id="replyBar" class="replybar">
       <div class="replytext" id="replyText"></div>
       <button id="cancelReply" class="btn secondary" style="padding:6px 10px">Cancel</button>
     </div>
-
     <form id="msgForm" class="message-form">
-      <input id="msgInput" class="input" type="text" placeholder="Reply to message..." autocomplete="off"/>
-      <button class="send" type="submit" title="Send">➤</button>
+      <input id="msgInput" class="input" type="text" placeholder="Reply..." autocomplete="off"/>
+      <button class="send" type="submit">➤</button>
     </form>
   </div>
 
-  <!-- Login page -->
-  <div id="login" style="display:flex;flex-direction:column;gap:16px;align-items:center;justify-content:center;width:100%;max-width:560px;min-height:60vh;background:var(--surface);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.45)">
-    <h2 style="margin:0">Welcome to Chat</h2>
-    <p style="margin:0;color:var(--muted)">Sign in to start chatting with your friends</p>
-    <button id="googleBtn" class="btn" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--accent),#9333ea);">
-      <span>🔐</span> <span>Log in with Google</span>
-    </button>
+  <div id="login" style="display:none;flex-direction:column;gap:16px;align-items:center;justify-content:center;width:100%;max-width:560px;min-height:60vh;background:var(--surface);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.45)">
+    <h2>Welcome to Chat</h2>
+    <p style="color:var(--muted)">Sign in to start chatting</p>
+    <button id="googleBtn" class="btn">🔐 Log in with Google</button>
   </div>
 
   <script type="module">
@@ -197,19 +186,15 @@
       apiKey: "AIzaSyCvPtBqPQJz-xaXDWA65lsmloBid4IsieI",
       authDomain: "apk-chat-6e708.firebaseapp.com",
       projectId: "apk-chat-6e708",
-      storageBucket: "apk-chat-6e708.firebasestorage.app",
+      storageBucket: "apk-chat-6e708.appspot.com",
       messagingSenderId: "460028192410",
-      appId: "1:460028192410:web:b198ac909e07e2ebb8e123",
-      measurementId: "G-J6N73TJVPC"
+      appId: "1:460028192410:web:b198ac909e07e2ebb8e123"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
-
-    const DEFAULT_AVATAR = "https://i.pravatar.cc/150?img=64";
 
     const loginEl = document.getElementById("login");
     const appEl   = document.getElementById("app");
@@ -231,110 +216,68 @@
       document.body.classList.toggle("light", !modeToggle.checked);
     });
 
-    googleBtn.onclick = async () => { try { await signInWithPopup(auth, provider); } catch (e){ alert("Login failed"); } };
+    googleBtn.onclick = () => signInWithPopup(auth, provider);
     logoutBtn.onclick = () => signOut(auth);
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          name: user.displayName || "User",
-          avatar: user.photoURL || DEFAULT_AVATAR,
-          lastActive: new Date()
-        }, { merge: true });
-
-        loginEl.style.display = "none";
-        logoutBtn.style.display = "block";
-
-        if (unsubUsers) unsubUsers();
-        if (unsubMsgs) unsubMsgs();
-
-        unsubUsers = listenParticipants();
-        unsubMsgs = listenMessages();
+        await setDoc(doc(db,"users",user.uid), {
+          uid:user.uid,
+          name:user.displayName || "User",
+          avatar:user.photoURL,
+          lastActive:new Date()
+        },{merge:true});
+        loginEl.style.display="none";
+        appEl.style.display="flex";
+        if(unsubUsers) unsubUsers();
+        if(unsubMsgs) unsubMsgs();
+        unsubUsers = onSnapshot(collection(db,"users"), (snap)=>{
+          participantsEl.innerHTML = snap.docs.map(d=>{
+            const p=d.data();
+            return `<div class="pill ${p.uid===auth.currentUser?.uid?'me':''}">
+              <img src="${p.avatar}" width="22"/> <span>${p.name}${p.uid===auth.currentUser?.uid?' (You)':''}</span>
+              <div class="dot"></div></div>`;
+          }).join("");
+        });
+        unsubMsgs = onSnapshot(query(collection(db,"chats","general-chat","messages"),orderBy("timestamp","asc")), (snap)=>{
+          const rows=[]; snap.forEach(docSnap=>{
+            const d=docSnap.data();
+            rows.push({id:docSnap.id, senderId:d.senderId, senderName:d.senderName, content:d.content, ts:d.timestamp?.toDate?d.timestamp.toDate():new Date(), reply:d.reply||null});
+          });
+          renderMessages(rows);
+        });
       } else {
-        loginEl.style.display = "flex";
-        logoutBtn.style.display = "none";
-
-        if (unsubUsers) { unsubUsers(); unsubUsers = null; }
-        if (unsubMsgs) { unsubMsgs(); unsubMsgs = null; }
+        appEl.style.display="none";
+        loginEl.style.display="flex";
       }
     });
 
-    function listenParticipants(){
-      return onSnapshot(collection(db, "users"), (snap) => {
-        const list = snap.docs.map(d => d.data());
-        participantsEl.innerHTML = list.map(p => `
-          <div class="pill ${p.uid===auth.currentUser?.uid ? 'me':''}">
-            <img src="${p.avatar || DEFAULT_AVATAR}" />
-            <span>${p.name || 'User'}${p.uid===auth.currentUser?.uid ? ' (You)':''}</span>
-            <div class="dot"></div>
-          </div>
-        `).join("");
-      });
-    }
-
-    function listenMessages(){
-      const q = query(collection(db,"chats","general-chat","messages"), orderBy("timestamp","asc"));
-      return onSnapshot(q, (snap) => {
-        const rows = [];
-        snap.forEach(docSnap => {
-          const d = docSnap.data();
-          rows.push({
-            id: docSnap.id,
-            senderId: d.senderId,
-            senderName: d.senderName || "User",
-            senderAvatar: d.senderAvatar || DEFAULT_AVATAR,
-            content: d.content,
-            reply: d.reply || null,
-            ts: d.timestamp?.toDate ? d.timestamp.toDate() : new Date()
-          });
-        });
-        renderMessages(rows);
-      });
-    }
-
     function renderMessages(items){
-      messagesEl.innerHTML = items.map(m => `
-        <div class="msg ${m.senderId===auth.currentUser?.uid ? 'me':'other'}">
-          ${m.reply ? `<div class="quote">“${escapeHtml(m.reply.content)}” — ${escapeHtml(m.reply.name || '')}</div>` : ``}
-          <div>${linkify(escapeHtml(m.content))}</div>
-          <div class="meta">${formatTime(m.ts)} ${m.senderId===auth.currentUser?.uid ? '• ✓✓' : ''}</div>
-          <div class="quick" onclick="window._setReply('${m.id}', '${escapeAttr(m.content)}', '${escapeAttr(m.senderName)}')">↩</div>
+      const atBottom = messagesEl.scrollHeight - messagesEl.scrollTop <= messagesEl.clientHeight+50;
+      messagesEl.innerHTML = items.map(m=>`
+        <div class="msg ${m.senderId===auth.currentUser?.uid?'me':'other'}">
+          ${m.reply?`<div class="quote">“${escapeHtml(m.reply.content)}” — ${escapeHtml(m.reply.name||'')}</div>`:''}
+          <div>${escapeHtml(m.content)}</div>
+          <div class="meta">${formatTime(m.ts)} ${m.senderId===auth.currentUser?.uid?'• ✓✓':''}</div>
         </div>
       `).join("");
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      if(atBottom) messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    window._setReply = (id, content, name) => {
-      replyTo = { id, content, name };
-      replyText.textContent = `Replying to ${name}: “${content}”`;
-      replyBar.classList.add("show");
-      msgInput.focus();
-    };
-    cancelReply.onclick = () => { replyTo = null; replyBar.classList.remove("show"); };
-
-    msgForm.addEventListener("submit", async (e) => {
+    msgForm.addEventListener("submit",async(e)=>{
       e.preventDefault();
-      const text = msgInput.value.trim();
-      if (!text || !auth.currentUser) return;
-      const m = {
-        senderId: auth.currentUser.uid,
-        senderName: auth.currentUser.displayName || "User",
-        senderAvatar: auth.currentUser.photoURL || DEFAULT_AVATAR,
-        content: text,
-        timestamp: serverTimestamp(),
-      };
-      if (replyTo) { m.reply = { id: replyTo.id, content: replyTo.content, name: replyTo.name }; }
-      await addDoc(collection(db,"chats","general-chat","messages"), m);
-      msgInput.value = "";
-      replyTo = null;
-      replyBar.classList.remove("show");
+      const text=msgInput.value.trim();
+      if(!text||!auth.currentUser) return;
+      const m={senderId:auth.currentUser.uid, senderName:auth.currentUser.displayName, content:text, timestamp:serverTimestamp()};
+      if(replyTo) m.reply=replyTo;
+      await addDoc(collection(db,"chats","general-chat","messages"),m);
+      msgInput.value=""; replyTo=null; replyBar.classList.remove("show");
     });
 
-    function formatTime(d){ try{ return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }catch{ return "" } }
-    function escapeHtml(s){ return s?.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) ?? ""; }
-    function escapeAttr(s){ return (s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
-    function linkify(text){ return text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:#22d3ee;text-decoration:underline">$1</a>'); }
+    cancelReply.onclick=()=>{replyTo=null; replyBar.classList.remove("show");};
+
+    function formatTime(d){return d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});}
+    function escapeHtml(s){return s?.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) ?? "";}
   </script>
 </body>
 </html>
