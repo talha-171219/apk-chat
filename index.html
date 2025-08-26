@@ -1,39 +1,78 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Talha — Chat</title>
-  <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon.png" type="image/png" />
   <style>
-    body { margin:0; font-family:sans-serif; background:#1e1e2f; color:#fff; }
-    #loginPage, #chatPage { display:none; height:100vh; justify-content:center; align-items:center; }
-    #chatPage { flex-direction:column; }
-    .participants { padding:10px; border-bottom:1px solid #444; }
-    .participant { display:flex; align-items:center; gap:8px; padding:6px; border-radius:8px; }
-    .participant.current-user { background:#3a2f6d; }
-    .participant-avatar { width:32px; height:32px; border-radius:50%; object-fit:cover; }
-    .online-dot { width:10px; height:10px; border-radius:50%; background:lime; margin-left:auto; }
-    #messages { flex:1; overflow-y:auto; padding:10px; }
-    .message { margin-bottom:10px; display:flex; flex-direction:column; max-width:70%; }
-    .message.me { margin-left:auto; align-items:flex-end; }
-    .bubble { background:#333; padding:8px 12px; border-radius:16px; }
-    .me .bubble { background:#4a90e2; }
-    .timestamp { font-size:0.7em; opacity:0.6; margin-top:2px; }
-    .message-form { display:flex; padding:10px; border-top:1px solid #444; align-items:center; gap:10px; }
+    :root {
+      --bg-color: rgba(25,25,35,0.8);
+      --text-color: #fff;
+      --bubble-me: rgba(80,150,250,0.8);
+      --bubble-other: rgba(60,60,70,0.8);
+    }
+    body.light {
+      --bg-color: rgba(245,245,250,0.8);
+      --text-color: #111;
+      --bubble-me: rgba(100,180,250,0.8);
+      --bubble-other: rgba(220,220,230,0.8);
+    }
+    body {
+      margin:0;
+      font-family: "Segoe UI", sans-serif;
+      background: url("https://www.transparenttextures.com/patterns/asfalt-light.png"), #121212;
+      background-size:cover;
+      color: var(--text-color);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+    }
+    #loginPage, #chatPage { display:none; width:100%; height:100%; }
+    #chatPage { display:flex; flex-direction:column; backdrop-filter: blur(12px); background: var(--bg-color); max-width:900px; width:100%; border-radius:16px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.5); }
+
+    /* Header */
+    .header { display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid rgba(255,255,255,0.1);}
+    .dark-toggle { cursor:pointer; }
+
+    .participants { max-height:100px; overflow-y:auto; padding:8px; border-bottom:1px solid rgba(255,255,255,0.1); }
+    .participant { display:flex; align-items:center; gap:8px; padding:4px 0; }
+    .participant-avatar { width:28px; height:28px; border-radius:50%; object-fit:cover; }
+    .online-dot { width:8px; height:8px; border-radius:50%; background:lime; margin-left:auto; }
+
+    #messages { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:10px; }
+    .message { max-width:70%; padding:8px 12px; border-radius:16px; position:relative; }
+    .me { align-self:flex-end; background:var(--bubble-me); }
+    .other { align-self:flex-start; background:var(--bubble-other); }
+    .timestamp { font-size:0.7em; opacity:0.7; margin-top:4px; }
+    .reply { font-size:0.8em; opacity:0.8; border-left:2px solid #ccc; padding-left:6px; margin-bottom:4px; }
+
+    /* Hover reply button */
+    .reply-btn { position:absolute; top:-5px; right:-25px; font-size:14px; cursor:pointer; opacity:0; }
+    .message:hover .reply-btn { opacity:1; }
+
+    .message-form { display:flex; padding:10px; border-top:1px solid rgba(255,255,255,0.1); gap:10px; align-items:center; background:var(--bg-color); }
     .message-form input { flex:1; padding:10px; border-radius:20px; border:none; font-size:16px; }
-    .send-btn { width:50px; height:50px; border-radius:50%; border:none; background:#4a90e2; color:#fff; font-size:18px; flex-shrink:0; }
+    .send-btn { width:50px; height:50px; border-radius:50%; border:none; background:#1db954; color:#fff; font-size:20px; flex-shrink:0; }
+
+    button { cursor:pointer; }
   </style>
 </head>
 <body>
-
   <!-- Login Page -->
-  <div id="loginPage">
-    <button onclick="signInWithGoogle()">Sign in with Google</button>
+  <div id="loginPage" style="display:flex;justify-content:center;align-items:center;flex-direction:column;">
+    <button onclick="signInWithGoogle()" style="padding:12px 20px;font-size:16px;background:#1db954;color:#fff;border:none;border-radius:8px;">Sign in with Google</button>
   </div>
 
   <!-- Chat Page -->
   <div id="chatPage">
+    <div class="header">
+      <span>Talha — Chat</span>
+      <div>
+        <button onclick="toggleDarkMode()" class="dark-toggle">🌙/☀️</button>
+        <button onclick="logout()" style="margin-left:10px;background:#e74c3c;color:#fff;border:none;padding:6px 12px;border-radius:6px;">Logout</button>
+      </div>
+    </div>
     <div class="participants" id="participantsList"></div>
     <div id="messages"></div>
     <form class="message-form" onsubmit="event.preventDefault(); sendMsg();">
@@ -42,17 +81,11 @@
     </form>
   </div>
 
-  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { 
-      getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged 
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { 
-      getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, doc 
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // ==== CONFIG ====
     const firebaseConfig = {
       apiKey: "AIzaSyCvPtBqPQJz-xaXDWA65lsmloBid4IsieI",
       authDomain: "apk-chat-6e708.firebaseapp.com",
@@ -71,97 +104,75 @@
 
     const DEFAULT_AVATAR = "https://i.pravatar.cc/150?img=12";
 
-    // ==== AUTH ====
-    window.signInWithGoogle = async () => {
-      try { await signInWithPopup(auth, provider); }
-      catch(e){ alert("Login failed"); console.error(e); }
-    };
-
+    window.signInWithGoogle = async () => { await signInWithPopup(auth, provider); };
     function logout(){ signOut(auth); }
+    function toggleDarkMode(){ document.body.classList.toggle("light"); }
 
-    // ==== PARTICIPANTS LISTENER ====
     function listenToParticipants() {
-      const usersRef = collection(db,"users");
-      return onSnapshot(usersRef,(snap)=>{
-        const participants = snap.docs.map(d=>d.data());
-        document.getElementById("participantsList").innerHTML = participants.map(p=>`
-          <div class="participant ${p.uid===auth.currentUser?.uid ? 'current-user':''}">
-            <img src="${p.avatar||DEFAULT_AVATAR}" onerror="this.src='${DEFAULT_AVATAR}'" class="participant-avatar"/>
-            <span class="participant-name">${p.name||"User"} ${p.uid===auth.currentUser?.uid?"(You)":""}</span>
+      return onSnapshot(collection(db,"users"),(snap)=>{
+        document.getElementById("participantsList").innerHTML = snap.docs.map(d=>{
+          const u=d.data();
+          return `<div class="participant ${u.uid===auth.currentUser?.uid?'current-user':''}">
+            <img src="${u.avatar||DEFAULT_AVATAR}" class="participant-avatar"/>
+            <span>${u.name||"User"} ${u.uid===auth.currentUser?.uid?"(You)":""}</span>
             <div class="online-dot"></div>
-          </div>
-        `).join("");
+          </div>`;
+        }).join("");
       });
     }
 
-    // ==== MESSAGE SENDING ====
+    let replyTo = null;
+
     window.sendMsg = async () => {
-      const input = document.getElementById("messageInput");
-      if(!input.value.trim() || !auth.currentUser) return;
+      const input=document.getElementById("messageInput");
+      if(!input.value.trim()||!auth.currentUser) return;
       const msgRef = collection(db,"chats","general-chat","messages");
       await addDoc(msgRef,{
         senderId:auth.currentUser.uid,
         senderName:auth.currentUser.displayName||"User",
         senderAvatar:auth.currentUser.photoURL||DEFAULT_AVATAR,
         content:input.value.trim(),
+        reply: replyTo,
         timestamp:serverTimestamp()
       });
-      input.value="";
+      input.value=""; replyTo=null;
     };
 
     function listenToMessages(){
-      const msgRef = collection(db,"chats","general-chat","messages");
-      const q = query(msgRef,orderBy("timestamp","asc"));
+      const q=query(collection(db,"chats","general-chat","messages"),orderBy("timestamp","asc"));
       return onSnapshot(q,(snap)=>{
-        const msgs=[];
-        snap.forEach(doc=>{
-          const d=doc.data();
-          msgs.push({
-            id:doc.id,
-            senderId:d.senderId,
-            senderName:d.senderName||"User",
-            senderAvatar:d.senderAvatar||DEFAULT_AVATAR,
-            content:d.content,
-            ts:d.timestamp?.toDate ? d.timestamp.toDate(): new Date()
-          });
-        });
+        const msgs=snap.docs.map(d=>({...d.data(),id:d.id,ts:d.data().timestamp?.toDate?.()}));
         renderMessages(msgs);
       });
     }
 
     function renderMessages(msgs){
       const box=document.getElementById("messages");
-      box.innerHTML=msgs.map(m=>`
-        <div class="message ${m.senderId===auth.currentUser?.uid?'me':''}">
-          <div class="bubble">${m.content}</div>
-          <div class="timestamp">${m.ts.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</div>
-        </div>
-      `).join("");
+      box.innerHTML=msgs.map(m=>{
+        return `<div class="message ${m.senderId===auth.currentUser?.uid?'me':'other'}">
+          ${m.reply?`<div class="reply">${m.reply.content}</div>`:""}
+          <div>${m.content}</div>
+          <div class="timestamp">${m.ts?m.ts.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):""}</div>
+          <span class="reply-btn" onclick="setReply('${m.id}','${m.content.replace(/'/g,"\\'")}')">↩</span>
+        </div>`;
+      }).join("");
       box.scrollTop=box.scrollHeight;
     }
 
-    // ==== AUTH STATE ====
+    window.setReply=(id,content)=>{ replyTo={id,content}; document.getElementById("messageInput").value="Reply: "+content+" "; };
+
     let unsubMsg,unsubUsers;
     onAuthStateChanged(auth, async (user)=>{
       if(user){
-        // save/update user info
-        await setDoc(doc(db,"users",user.uid),{
-          uid:user.uid,
-          name:user.displayName||"User",
-          avatar:user.photoURL||DEFAULT_AVATAR,
-          lastActive:new Date()
-        },{merge:true});
+        await setDoc(doc(db,"users",user.uid),{uid:user.uid,name:user.displayName||"User",avatar:user.photoURL||DEFAULT_AVATAR,lastActive:new Date()},{merge:true});
         document.getElementById("loginPage").style.display="none";
         document.getElementById("chatPage").style.display="flex";
-        if(unsubMsg) unsubMsg();
-        if(unsubUsers) unsubUsers();
-        unsubMsg=listenToMessages();
-        unsubUsers=listenToParticipants();
-      }else{
+        if(unsubMsg) unsubMsg(); if(unsubUsers) unsubUsers();
+        unsubMsg=listenToMessages(); unsubUsers=listenToParticipants();
+      } else {
         document.getElementById("loginPage").style.display="flex";
         document.getElementById("chatPage").style.display="none";
-        if(unsubMsg) unsubMsg();
-        if(unsubUsers) unsubUsers();
+        if(unsubMsg) unsubMsg(); if(unsubUsers) unsubUsers();
       }
     });
   </script>
