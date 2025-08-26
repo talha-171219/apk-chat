@@ -1,786 +1,169 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Talha — Chat</title>
-    <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon.png" type="image/png">
-    
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCvPtBqPQJz-xaXDWA65lsmloBid4IsieI",
-            authDomain: "apk-chat-6e708.firebaseapp.com",
-            databaseURL: "https://apk-chat-6e708-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "apk-chat-6e708",
-            storageBucket: "apk-chat-6e708.firebasestorage.app",
-            messagingSenderId: "460028192410",
-            appId: "1:460028192410:web:b198ac909e07e2ebb8e123",
-            measurementId: "G-J6N73TJVPC"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const googleProvider = new GoogleAuthProvider();
-        googleProvider.setCustomParameters({ prompt: 'select_account' });
-
-        // Global variables
-        window.currentUser = null;
-        window.messages = [];
-        window.isDarkMode = true;
-
-        // Authentication functions
-        window.signInWithGoogle = async () => {
-            try {
-                await signInWithPopup(auth, googleProvider);
-            } catch (error) {
-                console.error('Error signing in:', error);
-            }
-        };
-
-        window.logout = async () => {
-            try {
-                await signOut(auth);
-            } catch (error) {
-                console.error('Error signing out:', error);
-            }
-        };
-
-        // Message functions
-        window.sendMessage = async (content) => {
-            if (!window.currentUser || !content.trim()) return;
-            
-            try {
-                const messagesRef = collection(db, 'chats', 'general-chat', 'messages');
-                await addDoc(messagesRef, {
-                    senderId: window.currentUser.uid,
-                    senderName: window.currentUser.displayName || 'Anonymous',
-                    senderAvatar: window.currentUser.photoURL || '',
-                    content: content.trim(),
-                    isCurrentUser: true,
-                    timestamp: serverTimestamp()
-                });
-            } catch (error) {
-                console.error('Error sending message:', error);
-            }
-        };
-
-        // Listen for messages
-        window.listenToMessages = () => {
-            const messagesRef = collection(db, 'chats', 'general-chat', 'messages');
-            const q = query(messagesRef, orderBy('timestamp', 'asc'));
-
-            return onSnapshot(q, (snapshot) => {
-                window.messages = [];
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    window.messages.push({
-                        id: doc.id,
-                        senderId: data.senderId,
-                        senderName: data.senderName,
-                        senderAvatar: data.senderAvatar,
-                        content: data.content,
-                        timestamp: data.timestamp?.toDate() || new Date(),
-                        isCurrentUser: data.senderId === window.currentUser?.uid
-                    });
-                });
-                renderMessages();
-            });
-        };
-
-        // Auth state listener
-        onAuthStateChanged(auth, (user) => {
-            window.currentUser = user;
-            if (user) {
-                showChatPage();
-                window.messageUnsubscribe = window.listenToMessages();
-            } else {
-                showLoginPage();
-                if (window.messageUnsubscribe) {
-                    window.messageUnsubscribe();
-                }
-            }
-        });
-
-        // UI functions
-        window.showLoginPage = () => {
-            document.getElementById('loginPage').style.display = 'flex';
-            document.getElementById('chatPage').style.display = 'none';
-        };
-
-        window.showChatPage = () => {
-            document.getElementById('loginPage').style.display = 'none';
-            document.getElementById('chatPage').style.display = 'flex';
-            updateUserInfo();
-            renderParticipants();
-        };
-
-        window.updateUserInfo = () => {
-            if (!window.currentUser) return;
-            
-            const userAvatar = document.getElementById('userAvatar');
-            const userName = document.getElementById('userName');
-            
-            userAvatar.src = window.currentUser.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150';
-            userAvatar.alt = window.currentUser.displayName || 'User';
-            userName.textContent = window.currentUser.displayName || 'User';
-        };
-
-        window.renderParticipants = () => {
-            const participants = [
-                { id: 'minha', name: 'Minha', avatar: '/images/Avatar.jpg', isOnline: true },
-                { id: window.currentUser?.uid, name: window.currentUser?.displayName || 'Talha', avatar: window.currentUser?.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150', isOnline: true, isCurrentUser: true },
-                { id: 'sara', name: 'Sara', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150', isOnline: false },
-                { id: 'arif', name: 'Arif', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', isOnline: true }
-            ];
-
-            const participantsHtml = participants.map(p => `
-                <div class="participant ${p.isCurrentUser ? 'current-user' : ''}">
-                    <img src="${p.avatar}" alt="${p.name}" class="participant-avatar">
-                    <span class="participant-name">${p.name}${p.isCurrentUser ? ' (You)' : ''}</span>
-                    ${p.isOnline ? '<div class="online-dot"></div>' : ''}
-                </div>
-            `).join('');
-
-            document.getElementById('participantsList').innerHTML = participantsHtml;
-        };
-
-        window.renderMessages = () => {
-            const messagesHtml = window.messages.map(msg => {
-                const time = msg.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-                return `
-                    <div class="message ${msg.isCurrentUser ? 'message-sent' : 'message-received'}">
-                        ${!msg.isCurrentUser ? `<img src="${msg.senderAvatar}" alt="${msg.senderName}" class="message-avatar">` : ''}
-                        <div class="message-content">
-                            <div class="message-bubble">
-                                <p>${msg.content}</p>
-                            </div>
-                            <div class="message-time">
-                                ${time}${msg.isCurrentUser ? ' • ✓✓' : ''}
-                            </div>
-                        </div>
-                        ${msg.isCurrentUser ? `<img src="${msg.senderAvatar}" alt="${msg.senderName}" class="message-avatar">` : ''}
-                    </div>
-                `;
-            }).join('');
-
-            const messagesContainer = document.getElementById('messagesContainer');
-            if (window.messages.length === 0) {
-                messagesContainer.innerHTML = `
-                    <div style="text-align: center; margin: 20px 0;">
-                        <span style="color: #6b7280; background: #374151; padding: 8px 16px; border-radius: 20px; font-size: 12px;">আজ</span>
-                    </div>
-                `;
-            } else {
-                messagesContainer.innerHTML = `
-                    <div style="text-align: center; margin: 20px 0;">
-                        <span style="color: #6b7280; background: #374151; padding: 8px 16px; border-radius: 20px; font-size: 12px;">আজ</span>
-                    </div>
-                    ${messagesHtml}
-                `;
-            }
-            
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        };
-
-        window.toggleTheme = () => {
-            window.isDarkMode = !window.isDarkMode;
-            document.body.classList.toggle('light-mode', !window.isDarkMode);
-            document.getElementById('themeToggle').checked = window.isDarkMode;
-        };
-
-        // Initialize default messages if none exist
-        window.initializeDefaultMessages = async () => {
-            if (window.messages.length === 0 && window.currentUser) {
-                const defaultMessages = [
-                    { content: 'হাই কেমন আছো?', senderName: 'Minha', senderId: 'minha', senderAvatar: '/images/Avatar.jpg' },
-                    { content: 'আমি ভালো, ধন্যবাদ! তুমি রানো?', senderName: window.currentUser.displayName, senderId: window.currentUser.uid, senderAvatar: window.currentUser.photoURL },
-                    { content: 'Great! বিকেলে দেখা হবে?', senderName: 'Minha', senderId: 'minha', senderAvatar: '/images/Avatar.jpg' }
-                ];
-
-                for (let i = 0; i < defaultMessages.length; i++) {
-                    setTimeout(async () => {
-                        const msg = defaultMessages[i];
-                        const messagesRef = collection(db, 'chats', 'general-chat', 'messages');
-                        await addDoc(messagesRef, {
-                            senderId: msg.senderId,
-                            senderName: msg.senderName,
-                            senderAvatar: msg.senderAvatar,
-                            content: msg.content,
-                            isCurrentUser: msg.senderId === window.currentUser.uid,
-                            timestamp: serverTimestamp()
-                        });
-                    }, i * 1000);
-                }
-            }
-        };
-
-        // DOM ready
-        document.addEventListener('DOMContentLoaded', () => {
-            // Message form handler
-            document.getElementById('messageForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const input = document.getElementById('messageInput');
-                const message = input.value.trim();
-                if (message) {
-                    window.sendMessage(message);
-                    input.value = '';
-                }
-            });
-
-            // Initialize with a delay to allow messages to load
-            setTimeout(() => {
-                window.initializeDefaultMessages();
-            }, 2000);
-        });
-    </script>
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #111827;
-            color: #ffffff;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        body.light-mode {
-            background: #f9fafb;
-            color: #111827;
-        }
-
-        /* Login Page */
-        #loginPage {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: #111827;
-        }
-
-        .login-card {
-            background: #1f2937;
-            padding: 2rem;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid #374151;
-            max-width: 400px;
-            width: 90%;
-        }
-
-        body.light-mode .login-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            color: #111827;
-        }
-
-        .login-title {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-
-        .login-subtitle {
-            color: #9ca3af;
-            margin-bottom: 2rem;
-        }
-
-        body.light-mode .login-subtitle {
-            color: #6b7280;
-        }
-
-        .google-btn {
-            width: 100%;
-            background: #ffffff;
-            color: #111827;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            transition: background-color 0.2s;
-        }
-
-        .google-btn:hover {
-            background: #f3f4f6;
-        }
-
-        /* Chat Page */
-        #chatPage {
-            display: none;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        /* Header */
-        .chat-header {
-            background: #1f2937;
-            padding: 1rem;
-            border-bottom: 1px solid #374151;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        body.light-mode .chat-header {
-            background: #ffffff;
-            border-bottom: 1px solid #e5e7eb;
-            color: #111827;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        .user-details h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .user-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.875rem;
-            color: #10b981;
-        }
-
-        .online-indicator {
-            width: 8px;
-            height: 8px;
-            background: #10b981;
-            border-radius: 50%;
-        }
-
-        .header-controls {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .theme-toggle {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .theme-switch {
-            position: relative;
-            width: 44px;
-            height: 24px;
-        }
-
-        .theme-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #374151;
-            border-radius: 24px;
-            transition: 0.2s;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            border-radius: 50%;
-            transition: 0.2s;
-        }
-
-        input:checked + .slider {
-            background-color: #8b5cf6;
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(20px);
-        }
-
-        .logout-btn {
-            background: transparent;
-            border: none;
-            color: #9ca3af;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 4px;
-            transition: background-color 0.2s;
-        }
-
-        .logout-btn:hover {
-            background: #374151;
-            color: #ffffff;
-        }
-
-        /* Participants */
-        .participants {
-            background: #1f2937;
-            padding: 1rem;
-            border-bottom: 1px solid #374151;
-        }
-
-        body.light-mode .participants {
-            background: #ffffff;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .participants h3 {
-            font-size: 0.875rem;
-            color: #9ca3af;
-            margin-bottom: 12px;
-            font-weight: 500;
-        }
-
-        body.light-mode .participants h3 {
-            color: #6b7280;
-        }
-
-        .participants-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .participant {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            border-radius: 20px;
-            background: #374151;
-            border: 1px solid #4b5563;
-            position: relative;
-        }
-
-        body.light-mode .participant {
-            background: #f3f4f6;
-            border: 1px solid #d1d5db;
-        }
-
-        .participant.current-user {
-            background: rgba(139, 92, 246, 0.2);
-            border: 1px solid #8b5cf6;
-        }
-
-        .participant-avatar {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        .participant-name {
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .participant.current-user .participant-name {
-            color: #c4b5fd;
-        }
-
-        .online-dot {
-            width: 8px;
-            height: 8px;
-            background: #10b981;
-            border-radius: 50%;
-            position: absolute;
-            top: 6px;
-            right: 6px;
-        }
-
-        /* Messages */
-        .messages-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-            background: #111827;
-        }
-
-        body.light-mode .messages-container {
-            background: #f9fafb;
-        }
-
-        .message {
-            display: flex;
-            margin-bottom: 1rem;
-            align-items: flex-start;
-            gap: 8px;
-        }
-
-        .message-sent {
-            justify-content: flex-end;
-        }
-
-        .message-received {
-            justify-content: flex-start;
-        }
-
-        .message-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-top: 4px;
-        }
-
-        .message-content {
-            max-width: 70%;
-        }
-
-        .message-bubble {
-            padding: 12px 16px;
-            border-radius: 18px;
-            word-wrap: break-word;
-        }
-
-        .message-sent .message-bubble {
-            background: #8b5cf6;
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .message-received .message-bubble {
-            background: #374151;
-            color: #ffffff;
-            border-bottom-left-radius: 4px;
-        }
-
-        body.light-mode .message-received .message-bubble {
-            background: #e5e7eb;
-            color: #111827;
-        }
-
-        .message-time {
-            font-size: 0.75rem;
-            color: #9ca3af;
-            margin-top: 4px;
-            text-align: right;
-        }
-
-        .message-received .message-time {
-            text-align: left;
-        }
-
-        /* Message Input */
-        .message-input-container {
-            background: #1f2937;
-            padding: 1rem;
-            border-top: 1px solid #374151;
-        }
-
-        body.light-mode .message-input-container {
-            background: #ffffff;
-            border-top: 1px solid #e5e7eb;
-        }
-
-        .message-form {
-            display: flex;
-            gap: 12px;
-        }
-
-        .message-input {
-            flex: 1;
-            background: #374151;
-            border: 1px solid #4b5563;
-            border-radius: 24px;
-            padding: 12px 16px;
-            color: #ffffff;
-            outline: none;
-            font-size: 0.875rem;
-        }
-
-        body.light-mode .message-input {
-            background: #f3f4f6;
-            border: 1px solid #d1d5db;
-            color: #111827;
-        }
-
-        .message-input::placeholder {
-            color: #9ca3af;
-        }
-
-        .message-input:focus {
-            border-color: #8b5cf6;
-        }
-
-        .send-btn {
-            width: 44px;
-            height: 44px;
-            background: #8b5cf6;
-            border: none;
-            border-radius: 50%;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s;
-        }
-
-        .send-btn:hover {
-            background: #7c3aed;
-        }
-
-        /* Scrollbar */
-        .messages-container::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .messages-container::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .messages-container::-webkit-scrollbar-thumb {
-            background: #4b5563;
-            border-radius: 3px;
-        }
-
-        .messages-container::-webkit-scrollbar-thumb:hover {
-            background: #6b7280;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .chat-header {
-                padding: 0.75rem;
-            }
-            
-            .participants {
-                padding: 0.75rem;
-            }
-            
-            .message-content {
-                max-width: 85%;
-            }
-            
-            .participants-list {
-                flex-direction: column;
-                gap: 6px;
-            }
-            
-            .participant {
-                flex: none;
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Talha — Chat</title>
+  <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon.png" type="image/png" />
+  <style>
+    body { margin:0; font-family:sans-serif; background:#1e1e2f; color:#fff; }
+    #loginPage, #chatPage { display:none; height:100vh; justify-content:center; align-items:center; }
+    #chatPage { flex-direction:column; }
+    .participants { padding:10px; border-bottom:1px solid #444; }
+    .participant { display:flex; align-items:center; gap:8px; padding:6px; border-radius:8px; }
+    .participant.current-user { background:#3a2f6d; }
+    .participant-avatar { width:32px; height:32px; border-radius:50%; object-fit:cover; }
+    .online-dot { width:10px; height:10px; border-radius:50%; background:lime; margin-left:auto; }
+    #messages { flex:1; overflow-y:auto; padding:10px; }
+    .message { margin-bottom:10px; display:flex; flex-direction:column; max-width:70%; }
+    .message.me { margin-left:auto; align-items:flex-end; }
+    .bubble { background:#333; padding:8px 12px; border-radius:16px; }
+    .me .bubble { background:#4a90e2; }
+    .timestamp { font-size:0.7em; opacity:0.6; margin-top:2px; }
+    .message-form { display:flex; padding:10px; border-top:1px solid #444; align-items:center; gap:10px; }
+    .message-form input { flex:1; padding:10px; border-radius:20px; border:none; font-size:16px; }
+    .send-btn { width:50px; height:50px; border-radius:50%; border:none; background:#4a90e2; color:#fff; font-size:18px; flex-shrink:0; }
+  </style>
 </head>
 <body>
-    <!-- Login Page -->
-    <div id="loginPage">
-        <div class="login-card">
-            <h1 class="login-title">Welcome to Chat</h1>
-            <p class="login-subtitle">Sign in to start chatting with your friends</p>
-            <button class="google-btn" onclick="signInWithGoogle()">
-                <svg width="20" height="20" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Log in with Google
-            </button>
-        </div>
-    </div>
 
-    <!-- Chat Page -->
-    <div id="chatPage">
-        <!-- Header -->
-        <div class="chat-header">
-            <div class="user-info">
-                <img id="userAvatar" src="" alt="User" class="user-avatar">
-                <div class="user-details">
-                    <h2 id="userName">User</h2>
-                    <div class="user-status">
-                        <div class="online-indicator"></div>
-                        <span>Online</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="header-controls">
-                <div class="theme-toggle">
-                    <span>☀️</span>
-                    <label class="theme-switch">
-                        <input type="checkbox" id="themeToggle" checked onchange="toggleTheme()">
-                        <span class="slider"></span>
-                    </label>
-                    <span>🌙</span>
-                </div>
-                
-                <button class="logout-btn" onclick="logout()" title="Logout">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16,17 21,12 16,7"/>
-                        <line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
+  <!-- Login Page -->
+  <div id="loginPage">
+    <button onclick="signInWithGoogle()">Sign in with Google</button>
+  </div>
 
-        <!-- Participants -->
-        <div class="participants">
-            <h3>Participants</h3>
-            <div id="participantsList" class="participants-list"></div>
-        </div>
+  <!-- Chat Page -->
+  <div id="chatPage">
+    <div class="participants" id="participantsList"></div>
+    <div id="messages"></div>
+    <form class="message-form" onsubmit="event.preventDefault(); sendMsg();">
+      <input type="text" id="messageInput" placeholder="Type a message..."/>
+      <button type="submit" class="send-btn">➤</button>
+    </form>
+  </div>
 
-        <!-- Messages -->
-        <div id="messagesContainer" class="messages-container"></div>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+      getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { 
+      getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, doc 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        <!-- Message Input -->
-        <div class="message-input-container">
-            <form id="messageForm" class="message-form">
-                <input 
-                    type="text" 
-                    id="messageInput" 
-                    class="message-input" 
-                    placeholder="Reply to message..."
-                    autocomplete="off"
-                >
-                <button type="submit" class="send-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="22" y1="2" x2="11" y2="13"/>
-                        <polygon points="22,2 15,22 11,13 2,9"/>
-                    </svg>
-                </button>
-            </form>
+    // ==== CONFIG ====
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvPtBqPQJz-xaXDWA65lsmloBid4IsieI",
+      authDomain: "apk-chat-6e708.firebaseapp.com",
+      databaseURL: "https://apk-chat-6e708-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "apk-chat-6e708",
+      storageBucket: "apk-chat-6e708.firebasestorage.app",
+      messagingSenderId: "460028192410",
+      appId: "1:460028192410:web:b198ac909e07e2ebb8e123",
+      measurementId: "G-J6N73TJVPC"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    const DEFAULT_AVATAR = "https://i.pravatar.cc/150?img=12";
+
+    // ==== AUTH ====
+    window.signInWithGoogle = async () => {
+      try { await signInWithPopup(auth, provider); }
+      catch(e){ alert("Login failed"); console.error(e); }
+    };
+
+    function logout(){ signOut(auth); }
+
+    // ==== PARTICIPANTS LISTENER ====
+    function listenToParticipants() {
+      const usersRef = collection(db,"users");
+      return onSnapshot(usersRef,(snap)=>{
+        const participants = snap.docs.map(d=>d.data());
+        document.getElementById("participantsList").innerHTML = participants.map(p=>`
+          <div class="participant ${p.uid===auth.currentUser?.uid ? 'current-user':''}">
+            <img src="${p.avatar||DEFAULT_AVATAR}" onerror="this.src='${DEFAULT_AVATAR}'" class="participant-avatar"/>
+            <span class="participant-name">${p.name||"User"} ${p.uid===auth.currentUser?.uid?"(You)":""}</span>
+            <div class="online-dot"></div>
+          </div>
+        `).join("");
+      });
+    }
+
+    // ==== MESSAGE SENDING ====
+    window.sendMsg = async () => {
+      const input = document.getElementById("messageInput");
+      if(!input.value.trim() || !auth.currentUser) return;
+      const msgRef = collection(db,"chats","general-chat","messages");
+      await addDoc(msgRef,{
+        senderId:auth.currentUser.uid,
+        senderName:auth.currentUser.displayName||"User",
+        senderAvatar:auth.currentUser.photoURL||DEFAULT_AVATAR,
+        content:input.value.trim(),
+        timestamp:serverTimestamp()
+      });
+      input.value="";
+    };
+
+    function listenToMessages(){
+      const msgRef = collection(db,"chats","general-chat","messages");
+      const q = query(msgRef,orderBy("timestamp","asc"));
+      return onSnapshot(q,(snap)=>{
+        const msgs=[];
+        snap.forEach(doc=>{
+          const d=doc.data();
+          msgs.push({
+            id:doc.id,
+            senderId:d.senderId,
+            senderName:d.senderName||"User",
+            senderAvatar:d.senderAvatar||DEFAULT_AVATAR,
+            content:d.content,
+            ts:d.timestamp?.toDate ? d.timestamp.toDate(): new Date()
+          });
+        });
+        renderMessages(msgs);
+      });
+    }
+
+    function renderMessages(msgs){
+      const box=document.getElementById("messages");
+      box.innerHTML=msgs.map(m=>`
+        <div class="message ${m.senderId===auth.currentUser?.uid?'me':''}">
+          <div class="bubble">${m.content}</div>
+          <div class="timestamp">${m.ts.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</div>
         </div>
-    </div>
+      `).join("");
+      box.scrollTop=box.scrollHeight;
+    }
+
+    // ==== AUTH STATE ====
+    let unsubMsg,unsubUsers;
+    onAuthStateChanged(auth, async (user)=>{
+      if(user){
+        // save/update user info
+        await setDoc(doc(db,"users",user.uid),{
+          uid:user.uid,
+          name:user.displayName||"User",
+          avatar:user.photoURL||DEFAULT_AVATAR,
+          lastActive:new Date()
+        },{merge:true});
+        document.getElementById("loginPage").style.display="none";
+        document.getElementById("chatPage").style.display="flex";
+        if(unsubMsg) unsubMsg();
+        if(unsubUsers) unsubUsers();
+        unsubMsg=listenToMessages();
+        unsubUsers=listenToParticipants();
+      }else{
+        document.getElementById("loginPage").style.display="flex";
+        document.getElementById("chatPage").style.display="none";
+        if(unsubMsg) unsubMsg();
+        if(unsubUsers) unsubUsers();
+      }
+    });
+  </script>
 </body>
 </html>
