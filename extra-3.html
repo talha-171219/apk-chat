@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Talha — Chat</title>
+  <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon.png" type="image/png" />
+
+  <style>
+    /* ===== THEME TOKENS ===== */
+    :root{
+      --bg:#0f111a;
+      --surface:rgba(23,25,38,.65);
+      --surface-strong:rgba(23,25,38,.85);
+      --text:#e8eaf2;
+      --muted:#a5acc3;
+      --accent:#7c3aed;         /* purple */
+      --accent-2:#1db954;       /* spotify green */
+      --bubble-me:rgba(124,58,237,.92);
+      --bubble-other:rgba(44,48,71,.92);
+      --ring:rgba(124,58,237,.35);
+      --glass-br:12px;
+    }
+    body.light{
+      --bg:#eef1f7;
+      --surface:rgba(255,255,255,.65);
+      --surface-strong:rgba(255,255,255,.9);
+      --text:#0f111a;
+      --muted:#5b6278;
+      --accent:#6d28d9;
+      --bubble-me:rgba(109,40,217,.95);
+      --bubble-other:rgba(235,237,244,.95);
+      --ring:rgba(109,40,217,.25);
+    }
+
+    /* ===== GLOBAL ===== */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:
+        radial-gradient(1200px 800px at -10% -10%, #1a1c2e 10%, transparent 40%),
+        radial-gradient(1200px 800px at 110% 110%, #211a33 10%, transparent 40%),
+        var(--bg);
+      color:var(--text);
+      display:flex; align-items:center; justify-content:center;
+      padding:16px;
+    }
+
+    /* ===== APP SHELL ===== */
+    .app{
+      width:100%;
+      max-width:1000px;                  /* WIDE chat box */
+      min-height:80vh;
+      display:flex; flex-direction:column;
+      background:var(--surface);
+      backdrop-filter: blur(14px) saturate(120%);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:24px;
+      overflow:hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    }
+
+    /* ===== HEADER ===== */
+    .header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 16px;
+      background:linear-gradient(180deg, var(--surface-strong), transparent);
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+    .brand .avatar{
+      width:36px;height:36px;border-radius:50%;
+      background:linear-gradient(135deg,#6d28d9,#9333ea,#22d3ee);
+      display:grid;place-items:center;font-weight:800;
+      color:white;box-shadow:0 6px 20px rgba(124,58,237,.45);
+    }
+    .header-controls{display:flex;align-items:center;gap:10px}
+    .btn{
+      border:none; cursor:pointer; border-radius:10px;
+      padding:8px 12px; font-weight:600; color:white;
+      background:var(--accent);
+      box-shadow:0 6px 20px var(--ring);
+    }
+    .btn.secondary{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.12)}
+    .toggle{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);
+      background:var(--surface-strong);
+    }
+
+    /* ===== PARTICIPANTS ===== */
+    .participants{
+      padding:10px 16px; display:flex; gap:8px; flex-wrap:wrap;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      background:linear-gradient(180deg, transparent, rgba(0,0,0,.08));
+    }
+    .pill{
+      display:flex;align-items:center;gap:8px;
+      padding:8px 12px;border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .pill.me{background:rgba(124,58,237,.18);border-color:rgba(124,58,237,.5)}
+    .pill img{width:22px;height:22px;border-radius:50%;object-fit:cover}
+    .dot{width:8px;height:8px;border-radius:50%;background:#10b981;margin-left:4px}
+
+    /* ===== MESSAGES ===== */
+    .messages{flex:1;overflow:auto;padding:18px 16px;display:flex;flex-direction:column;gap:12px}
+    .msg{
+      max-width:70%;
+      padding:12px 14px;border-radius:16px;
+      position:relative; word-wrap:break-word;
+      box-shadow:0 8px 24px rgba(0,0,0,.25);
+    }
+    .msg.me{align-self:flex-end;background:var(--bubble-me);color:#fff;border-bottom-right-radius:6px}
+    .msg.other{align-self:flex-start;background:var(--bubble-other);border-bottom-left-radius:6px}
+    .meta{font-size:12px;opacity:.8;margin-top:6px}
+    .quote{
+      font-size:13px; opacity:.85; padding:6px 8px; margin-bottom:8px;
+      border-left:3px solid rgba(255,255,255,.6);
+      background:rgba(255,255,255,.12); border-radius:10px;
+    }
+    .msg .quick{position:absolute;top:-8px;right:-30px;opacity:0;transition:.15s;cursor:pointer}
+    .msg:hover .quick{opacity:.9}
+
+    /* ===== REPLY BAR + INPUT ===== */
+    .replybar{
+      display:none;align-items:center;justify-content:space-between;gap:10px;
+      background:var(--surface-strong); padding:8px 12px;
+      border-top:1px dashed rgba(255,255,255,.15);
+    }
+    .replybar.show{display:flex}
+    .replytext{font-size:14px;opacity:.85}
+    .message-form{
+      display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface-strong);border-top:1px solid rgba(255,255,255,.08)
+    }
+    .input{
+      flex:1; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+      color:var(--text); border-radius:999px; padding:12px 16px;
+      outline:none; font-size:16px;      /* iOS zoom fix */
+    }
+    .send{
+      width:52px;height:52px;border-radius:50%;border:none;flex-shrink:0;
+      background:var(--accent); color:#fff; font-size:20px; cursor:pointer;
+      display:grid; place-items:center; box-shadow:0 10px 28px var(--ring);
+    }
+    .send:hover{filter:brightness(1.05)}
+    @media (max-width:640px){ .msg{max-width:85%} }
+  </style>
+</head>
+
+<body>
+  <div class="app" id="app" style="display:none">
+    <!-- Header -->
+    <div class="header">
+      <div class="brand">
+        <div class="avatar">T</div>
+        <div>Talha — Chat</div>
+      </div>
+      <div class="header-controls">
+        <div class="toggle">
+          <span>Light</span>
+          <label style="display:inline-flex;align-items:center;gap:6px">
+            <input id="modeToggle" type="checkbox" checked />
+            <span>Dark</span>
+          </label>
+        </div>
+        <button id="logoutBtn" class="btn secondary" title="Logout">Logout</button>
+      </div>
+    </div>
+
+    <!-- Participants -->
+    <div id="participants" class="participants"></div>
+
+    <!-- Messages -->
+    <div id="messages" class="messages"></div>
+
+    <!-- Reply preview -->
+    <div id="replyBar" class="replybar">
+      <div class="replytext" id="replyText"></div>
+      <button id="cancelReply" class="btn secondary" style="padding:6px 10px">Cancel</button>
+    </div>
+
+    <!-- Input -->
+    <form id="msgForm" class="message-form">
+      <input id="msgInput" class="input" type="text" placeholder="Reply to message..." autocomplete="off"/>
+      <button class="send" type="submit" title="Send">➤</button>
+    </form>
+  </div>
+
+  <!-- Login page -->
+  <div id="login" style="display:flex;flex-direction:column;gap:16px;align-items:center;justify-content:center;width:100%;max-width:560px;min-height:60vh;background:var(--surface);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.45)">
+    <h2 style="margin:0">Welcome to Chat</h2>
+    <p style="margin:0;color:var(--muted)">Sign in to start chatting with your friends</p>
+    <button id="googleBtn" class="btn" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--accent),#9333ea);">
+      <span>🔐</span> <span>Log in with Google</span>
+    </button>
+  </div>
+
+  <!-- ===== Firebase + App Logic ===== -->
+  <script type="module">
+    /* Firebase SDKs */
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    /* ---- Config (your one kept) ---- */
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvPtBqPQJz-xaXDWA65lsmloBid4IsieI",
+      authDomain: "apk-chat-6e708.firebaseapp.com",
+      databaseURL: "https://apk-chat-6e708-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "apk-chat-6e708",
+      storageBucket: "apk-chat-6e708.firebasestorage.app",
+      messagingSenderId: "460028192410",
+      appId: "1:460028192410:web:b198ac909e07e2ebb8e123",
+      measurementId: "G-J6N73TJVPC"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+
+    const DEFAULT_AVATAR = "https://i.pravatar.cc/150?img=64";
+
+    /* ---- DOM ---- */
+    const loginEl = document.getElementById("login");
+    const appEl   = document.getElementById("app");
+    const googleBtn = document.getElementById("googleBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const participantsEl = document.getElementById("participants");
+    const messagesEl = document.getElementById("messages");
+    const msgForm = document.getElementById("msgForm");
+    const msgInput = document.getElementById("msgInput");
+    const replyBar = document.getElementById("replyBar");
+    const replyText = document.getElementById("replyText");
+    const cancelReply = document.getElementById("cancelReply");
+    const modeToggle = document.getElementById("modeToggle");
+
+    /* ---- State ---- */
+    let unsubMsgs = null, unsubUsers = null;
+    let replyTo = null; // {id, content, name}
+
+    /* ---- Theme ---- */
+    modeToggle.addEventListener("change", () => {
+      document.body.classList.toggle("light", !modeToggle.checked);
+    });
+
+    /* ---- Auth ---- */
+    googleBtn.onclick = async () => {
+      try { await signInWithPopup(auth, provider); }
+      catch (e){ alert("Login failed"); console.error(e); }
+    };
+    logoutBtn.onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Save/merge user to 'users' collection
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          name: user.displayName || "User",
+          avatar: user.photoURL || DEFAULT_AVATAR,
+          lastActive: new Date()
+        }, { merge: true });
+
+        loginEl.style.display = "none";
+        appEl.style.display = "flex";
+
+        if (unsubUsers) unsubUsers();
+        if (unsubMsgs) unsubMsgs();
+
+        unsubUsers = listenParticipants();
+        unsubMsgs = listenMessages();
+      } else {
+        appEl.style.display = "none";
+        loginEl.style.display = "flex";
+
+        if (unsubUsers) { unsubUsers(); unsubUsers = null; }
+        if (unsubMsgs) { unsubMsgs(); unsubMsgs = null; }
+      }
+    });
+
+    /* ---- Participants ---- */
+    function listenParticipants(){
+      return onSnapshot(collection(db, "users"), (snap) => {
+        const list = snap.docs.map(d => d.data());
+        participantsEl.innerHTML = list.map(p => `
+          <div class="pill ${p.uid===auth.currentUser?.uid ? 'me':''}">
+            <img src="${p.avatar || DEFAULT_AVATAR}" alt="${p.name || 'User'}" />
+            <span>${p.name || 'User'}${p.uid===auth.currentUser?.uid ? ' (You)':''}</span>
+            <div class="dot"></div>
+          </div>
+        `).join("");
+      });
+    }
+
+    /* ---- Messages ---- */
+    function listenMessages(){
+      const q = query(collection(db,"chats","general-chat","messages"), orderBy("timestamp","asc"));
+      return onSnapshot(q, (snap) => {
+        const rows = [];
+        snap.forEach(docSnap => {
+          const d = docSnap.data();
+          rows.push({
+            id: docSnap.id,
+            senderId: d.senderId,
+            senderName: d.senderName || "User",
+            senderAvatar: d.senderAvatar || DEFAULT_AVATAR,
+            content: d.content,
+            reply: d.reply || null,   // { id, content, name }
+            ts: d.timestamp?.toDate ? d.timestamp.toDate() : new Date()
+          });
+        });
+        renderMessages(rows);
+      });
+    }
+
+    function renderMessages(items){
+      messagesEl.innerHTML = items.map(m => `
+        <div class="msg ${m.senderId===auth.currentUser?.uid ? 'me':'other'}">
+          ${m.reply ? `<div class="quote">“${escapeHtml(m.reply.content)}” — ${escapeHtml(m.reply.name || '')}</div>` : ``}
+          <div>${linkify(escapeHtml(m.content))}</div>
+          <div class="meta">${formatTime(m.ts)} ${m.senderId===auth.currentUser?.uid ? '• ✓✓' : ''}</div>
+          <div class="quick" title="Reply" onclick="window._setReply('${m.id}', '${escapeAttr(m.content)}', '${escapeAttr(m.senderName)}')">↩</div>
+        </div>
+      `).join("");
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    /* Reply handlers (global so string onclick works) */
+    window._setReply = (id, content, name) => {
+      replyTo = { id, content, name };
+      replyText.textContent = `Replying to ${name}: “${content}”`;
+      replyBar.classList.add("show");
+      msgInput.focus();
+    };
+    cancelReply.onclick = () => {
+      replyTo = null;
+      replyBar.classList.remove("show");
+    };
+
+    /* ---- Send Message ---- */
+    msgForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = msgInput.value.trim();
+      if (!text || !auth.currentUser) return;
+
+      const m = {
+        senderId: auth.currentUser.uid,
+        senderName: auth.currentUser.displayName || "User",
+        senderAvatar: auth.currentUser.photoURL || DEFAULT_AVATAR,
+        content: text,
+        timestamp: serverTimestamp(),
+      };
+      if (replyTo) {
+        m.reply = { id: replyTo.id, content: replyTo.content, name: replyTo.name };
+      }
+
+      try {
+        await addDoc(collection(db,"chats","general-chat","messages"), m);
+      } catch(err){ console.error("send failed", err); }
+      msgInput.value = "";
+      replyTo = null;
+      replyBar.classList.remove("show");
+    });
+
+    /* ---- Utils ---- */
+    function formatTime(d){
+      try{
+        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }catch{ return "" }
+    }
+    function escapeHtml(s){
+      return s?.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) ?? "";
+    }
+    function escapeAttr(s){ return (s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+    function linkify(text){
+      const urlRe = /(https?:\/\/[^\s]+)/g;
+      return text.replace(urlRe, '<a href="$1" target="_blank" rel="noopener" style="color:#22d3ee;text-decoration:underline">$1</a>');
+    }
+
+    /* Show app quickly while auth resolves (optional) */
+    // document.getElementById("app").style.display = "flex";
+  </script>
+</body>
+</html>
